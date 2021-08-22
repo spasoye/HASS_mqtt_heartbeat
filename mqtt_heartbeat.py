@@ -15,9 +15,26 @@ def log_write(text):
     current_time = now.strftime("%d/%m/%Y [%H:%M:%S]")
     log.write(current_time + " > " + text + "\n")
 
-def on_connect(client, userdata, rc, *extra_params):
-    log_write('Connect result:', str(rc))
-    print('Connect result:', str(rc))
+def on_connect(client, userdata, flags, rc):
+    print("user:", userdata)
+    print("flags:", flags)
+    if rc == 0:
+        client.connected_flag = True
+        log_write('Connection OK, result:' + str(rc))
+        print('Connection OK, result:', str(rc))
+    else:
+        log_write('Bad connection, result:' + str(rc))
+        print('Bad connection, result:', str(rc))
+
+def on_socket_open(client, userdata, sock):
+    print("socket opened")
+
+def on_socket_close(client, userdata, sock):
+    print("socket close")
+
+def on_disconnect(client, userdata, rc):
+    print("disconnect")
+    log_write("disconnect")
 
 if len(sys.argv) != 2:
     print("Must provide cfg file absolute path")
@@ -32,7 +49,7 @@ cfg_json = json.loads(cfg_str)
 log_file = cfg_json["log_file"]
 
 print("log file size: ", Path(log_file).stat().st_size)
-if Path(log_file).stat().st_size > 200:
+if Path(log_file).stat().st_size > 8192:
     print("log file to big. Deleting log file")
     os.remove(log_file)
 
@@ -41,7 +58,11 @@ broker = cfg_json["broker"]
 period = cfg_json["period"]
 
 client = mqtt.Client()
+client.connected_flag = False
 client.on_connect = on_connect
+client.on_disconnect = on_disconnect
+client.on_socket_close = on_socket_close
+client.on_socket_open = on_socket_open
 
 log_write("Started...")
 
@@ -55,6 +76,8 @@ while True:
     else:
         log_write("Connected to broker")
         break
+
+client.loop_start()
 
 while True:
     try:
