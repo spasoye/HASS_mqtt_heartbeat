@@ -7,24 +7,27 @@ import json
 import paho.mqtt.client as mqtt
 from pathlib import Path
 import os
+import config as cfg
+import ha_mqtt_discoverable as had
 
 def log_write(text):
-    global log_file
-    log = open(log_file, "a")
+    log = open(cfg.log_file, "a")
     now = datetime.now()
     current_time = now.strftime("%d/%m/%Y [%H:%M:%S]")
     log.write(current_time + " > " + text + "\n")
 
-def on_connect(client, userdata, flags, rc):
-    print("user:", userdata)
-    print("flags:", flags)
-    if rc == 0:
+def on_connect(client, userdata, flags, reason_code, properties):
+    print(f"Connected with result code {reason_code}")
+    print(f"user {userdata}")
+    print(f"flags {flags}")
+
+    if reason_code == 0:
         client.connected_flag = True
-        log_write('Connection OK, result:' + str(rc))
-        print('Connection OK, result:', str(rc))
+        log_write('Connection OK, result:' + str(reason_code))
+        print('Connection OK, result:', str(reason_code))
     else:
-        log_write('Bad connection, result:' + str(rc))
-        print('Bad connection, result:', str(rc))
+        log_write('Bad connection, result:' + str(reason_code))
+        print('Bad connection, result:', str(reason_code))
 
 def on_socket_open(client, userdata, sock):
     print("socket opened")
@@ -36,28 +39,16 @@ def on_disconnect(client, userdata, rc):
     print("disconnect")
     log_write("disconnect")
 
-if len(sys.argv) != 2:
-    print("Must provide cfg file absolute path")
-    sys.exit()
+try:
+    print("log file size: ", Path(cfg.log_file).stat().st_size)
+except:
+    print("No log file")
+else:
+    if Path(cfg.log_file).stat().st_size > 8192:
+        print("log file to big. Deleting log file")
+        os.remove(cfg.log_file)
 
-# import configuration
-cfg_file = open(sys.argv[1], "r")
-cfg_str = cfg_file.read()
-cfg_file.close()
-cfg_json = json.loads(cfg_str)
-
-log_file = cfg_json["log_file"]
-
-print("log file size: ", Path(log_file).stat().st_size)
-if Path(log_file).stat().st_size > 8192:
-    print("log file to big. Deleting log file")
-    os.remove(log_file)
-
-name = cfg_json["name"]
-broker = cfg_json["broker"]
-period = cfg_json["period"]
-
-client = mqtt.Client()
+client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 client.connected_flag = False
 client.on_connect = on_connect
 client.on_disconnect = on_disconnect
@@ -68,7 +59,7 @@ log_write("Started...")
 
 while True:
     try:
-        client.connect(broker, 1883, 5)
+        client.connect(cfg.broker, 1883, 5)
     except Exception as ex:
         print(ex)
         log_write(str(ex))
@@ -81,8 +72,8 @@ client.loop_start()
 
 while True:
     try:
-        client.publish(name + "/status",  "ON")
+        client.publish(cfg.name + "/status",  "ON")
     except Exception as error:
         log_write(error)
 
-    time.sleep(period)
+    time.sleep(cfg.period)

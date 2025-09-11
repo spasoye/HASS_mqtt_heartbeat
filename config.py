@@ -1,0 +1,5 @@
+log_file = "pc_status.log"
+name = "pc"
+broker = "192.168.100.70"
+period = 20
+
