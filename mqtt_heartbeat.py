@@ -8,7 +8,8 @@ import paho.mqtt.client as mqtt
 from pathlib import Path
 import os
 import config as cfg
-import ha_mqtt_discoverable as had
+from ha_mqtt_discoverable import Settings
+from ha_mqtt_discoverable.sensors import BinarySensor, BinarySensorInfo
 
 def log_write(text):
     log = open(cfg.log_file, "a")
@@ -48,32 +49,45 @@ else:
         print("log file to big. Deleting log file")
         os.remove(cfg.log_file)
 
-client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-client.connected_flag = False
-client.on_connect = on_connect
-client.on_disconnect = on_disconnect
-client.on_socket_close = on_socket_close
-client.on_socket_open = on_socket_open
-
 log_write("Started...")
 
+# Configure the required parameters for the MQTT broker
+mqtt_settings = Settings.MQTT(
+    host=cfg.broker,
+    port=1883,
+    client_id=cfg.unique_id
+)
+
+# Information about the status entity
+sensor_info = BinarySensorInfo(
+    name="PC state",
+    unique_id=cfg.unique_id,
+    device_class="connectivity",
+    expire_after=cfg.period * 2,
+    device={
+        "identifiers": [cfg.unique_id + "_device"],
+        "manufacturer": "Spas Tech",
+        "model": "Heartbeat v1",
+        "name": cfg.name
+    },
+)
+
+settings = Settings(mqtt=mqtt_settings, entity=sensor_info)
+
+# Create the switch entity
+pc_status = BinarySensor(settings)
+pc_status.on()  # Set initial state to ON
+
 while True:
     try:
-        client.connect(cfg.broker, 1883, 5)
-    except Exception as ex:
-        print(ex)
-        log_write(str(ex))
-        time.sleep(3)
-    else:
-        log_write("Connected to broker")
-        break
-
-client.loop_start()
-
-while True:
-    try:
-        client.publish(cfg.name + "/status",  "ON")
+        pc_status.on()  # Update the state to ON
     except Exception as error:
-        log_write(error)
+        log_write(str(error))
 
-    time.sleep(cfg.period)
+    try:
+        time.sleep(cfg.period)
+    except KeyboardInterrupt:
+        pc_status.off()
+        log_write("Stopped by user")
+        sys.exit(0)
+
