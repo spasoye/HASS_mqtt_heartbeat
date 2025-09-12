@@ -55,6 +55,7 @@ while True:
         time.sleep(cfg.period)
     except KeyboardInterrupt:
         pc_status.off()
+        pc_status.mqtt_client.publish("availability", "offline")
         print("Stopped by user")
         sys.exit(0)
 
