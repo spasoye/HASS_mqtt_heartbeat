@@ -8,55 +8,22 @@ import paho.mqtt.client as mqtt
 from pathlib import Path
 import os
 import config as cfg
+
+# Research Home Assistant MQTT Discovery (https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery) before using this code
+
 from ha_mqtt_discoverable import Settings
 from ha_mqtt_discoverable.sensors import BinarySensor, BinarySensorInfo
 
-def log_write(text):
-    log = open(cfg.log_file, "a")
-    now = datetime.now()
-    current_time = now.strftime("%d/%m/%Y [%H:%M:%S]")
-    log.write(current_time + " > " + text + "\n")
-
-def on_connect(client, userdata, flags, reason_code, properties):
-    print(f"Connected with result code {reason_code}")
-    print(f"user {userdata}")
-    print(f"flags {flags}")
-
-    if reason_code == 0:
-        client.connected_flag = True
-        log_write('Connection OK, result:' + str(reason_code))
-        print('Connection OK, result:', str(reason_code))
-    else:
-        log_write('Bad connection, result:' + str(reason_code))
-        print('Bad connection, result:', str(reason_code))
-
-def on_socket_open(client, userdata, sock):
-    print("socket opened")
-
-def on_socket_close(client, userdata, sock):
-    print("socket close")
-
-def on_disconnect(client, userdata, rc):
-    print("disconnect")
-    log_write("disconnect")
-
-try:
-    print("log file size: ", Path(cfg.log_file).stat().st_size)
-except:
-    print("No log file")
-else:
-    if Path(cfg.log_file).stat().st_size > 8192:
-        print("log file to big. Deleting log file")
-        os.remove(cfg.log_file)
-
-log_write("Started...")
+print("Heartbeat started...")
 
 # Configure the required parameters for the MQTT broker
 mqtt_settings = Settings.MQTT(
-    host=cfg.broker,
-    port=1883,
-    client_id=cfg.unique_id
+    host=cfg.broker.host,
+    port=cfg.broker.port,
+    client_name=cfg.unique_id
 )
+
+print("MQTT settings:", mqtt_settings)
 
 # Information about the status entity
 sensor_info = BinarySensorInfo(
@@ -66,8 +33,8 @@ sensor_info = BinarySensorInfo(
     expire_after=cfg.period * 2,
     device={
         "identifiers": [cfg.unique_id + "_device"],
-        "manufacturer": "Spas Tech",
-        "model": "Heartbeat v1",
+        "manufacturer": cfg.manufacturer,
+        "model": cfg.model,
         "name": cfg.name
     },
 )
@@ -82,12 +49,12 @@ while True:
     try:
         pc_status.on()  # Update the state to ON
     except Exception as error:
-        log_write(str(error))
+        print(str(error))
 
     try:
         time.sleep(cfg.period)
     except KeyboardInterrupt:
         pc_status.off()
-        log_write("Stopped by user")
+        print("Stopped by user")
         sys.exit(0)
 
