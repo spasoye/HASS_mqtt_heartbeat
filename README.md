@@ -2,7 +2,7 @@
 
 The point of this script is to send status every previously defined period. 
 It is used it for state indication of PC on local Home Assistant setup, but 
-it can be used for anything.
+can be adapted for other use cases.
 
 ## Installation
 

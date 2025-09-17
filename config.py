@@ -1,4 +1,3 @@
-log_file = "pc_status.log"
 name = "Workshop PC heartbeat"    # Friendly display name
 unique_id = "workshop_pc_heartbeat"    # Technical identifier
 period = 20

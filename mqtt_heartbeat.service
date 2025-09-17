@@ -1,0 +1,15 @@
+[Unit]
+Description=MQTT Heartbeat Service for Home Assistant
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/mqtt_heartbeat
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/mqtt_heartbeat/venv/bin/python /opt/mqtt_heartbeat/mqtt_heartbeat.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,18 +1,27 @@
-#!/usr/bin/env python3
-
 import sys
 import time
-from datetime import datetime
+import signal
 import json
 import paho.mqtt.client as mqtt
 from pathlib import Path
-import os
 import config as cfg
 
 # Research Home Assistant MQTT Discovery (https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery) before using this code
 
 from ha_mqtt_discoverable import Settings
 from ha_mqtt_discoverable.sensors import BinarySensor, BinarySensorInfo
+
+def cleanup(signum, frame):
+    """Clean up function that runs on SIGTERM and SIGINT"""
+    print(f"Received signal {signum}")
+    pc_status.off()
+    pc_status.mqtt_client.publish("availability", "offline")
+    print("Stopped by signal")
+    sys.exit(0)
+
+# Register signal handlers
+signal.signal(signal.SIGTERM, cleanup)  # systemctl stop
+signal.signal(signal.SIGINT, cleanup)   # Ctrl+C
 
 print("Heartbeat started...")
 
